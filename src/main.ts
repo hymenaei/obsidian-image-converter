@@ -13897,7 +13897,7 @@ export class CropModal extends Modal {
     async onOpen() {
 		const { contentEl } = this;
 		contentEl.empty();
-		
+	
 		// Add a wrapper div for better control of modal size
 		const modalWrapper = contentEl.createDiv('crop-modal-wrapper');
 	
@@ -13908,7 +13908,7 @@ export class CropModal extends Modal {
 		// Create main container
 		const modalContent = modalWrapper.createDiv('crop-modal-content');
 		this.cropContainer = modalContent.createDiv('crop-container');
-			
+	
 		// Create selection area
 		this.selectionArea = this.cropContainer.createDiv('selection-area');
 		this.selectionArea.style.display = 'none';
@@ -13918,107 +13918,114 @@ export class CropModal extends Modal {
 		const saveButton = buttonContainer.createEl('button', { text: 'Save' });
 		const cancelButton = buttonContainer.createEl('button', { text: 'Cancel' });
 		const resetButton = buttonContainer.createEl('button', { text: 'Reset' });
-
+	
 		// Add aspect ratio controls
 		const aspectRatioContainer = modalHeader.createDiv('aspect-ratio-controls');
-
+	
 		// Add transform controls
 		this.createTransformControls(aspectRatioContainer);
 		aspectRatioContainer.createEl('span', { text: ' ' });
-		
+	
 		// Create ratio buttons container
 		const ratioButtonsContainer = aspectRatioContainer.createDiv('ratio-buttons-container');
-
+	
 		// Add preset ratio buttons
 		[
 			{ name: 'free', ratio: null, label: 'Free' },
+			{ name: 'same', ratio: 'same', label: 'Same' },
 			{ name: 'square', ratio: 1, label: '1:1' },
-			{ name: '16:9', ratio: 16/9, label: '16:9' },
-			{ name: '4:3', ratio: 4/3, label: '4:3' },
+			{ name: '16:9', ratio: 16 / 9, label: '16:9' },
+			{ name: '4:3', ratio: 4 / 3, label: '4:3' },
+			
 		].forEach(({ name, ratio, label }) => {
 			const button = ratioButtonsContainer.createEl('button', {
 				text: label,
 				cls: 'aspect-ratio-button'
 			});
-			
+	
 			button.addEventListener('click', () => {
 				// Remove active class from all buttons
-				aspectRatioContainer.querySelectorAll('.aspect-ratio-button').forEach(btn => 
+				aspectRatioContainer.querySelectorAll('.aspect-ratio-button').forEach(btn =>
 					btn.removeClass('active'));
-				
+	
 				// Add active class to clicked button
 				button.addClass('active');
-				
+	
 				// Clear custom inputs when selecting a preset
-				if (ratio !== null) {
+				if (ratio !== null && ratio !== 'same') {
 					widthInput.value = '';
 					heightInput.value = '';
 				}
-				
-				this.currentAspectRatio = ratio;
-				
+	
+				if (ratio === 'same') {
+					// Set the aspect ratio to the original image's aspect ratio
+					this.currentAspectRatio = this.originalImage.naturalWidth / this.originalImage.naturalHeight;
+				} else {
+					this.currentAspectRatio = typeof ratio === 'number' ? ratio : null;
+				}
+	
 				// If there's an existing selection, adjust it to the new aspect ratio
 				if (this.selectionArea.style.display !== 'none') {
 					this.adjustSelectionToAspectRatio();
 				}
 			});
-
+	
 			// Set free as default active
 			if (name === 'free') {
 				button.addClass('active');
 			}
 		});
-
+	
 		// Create custom ratio inputs
 		const customRatioContainer = aspectRatioContainer.createDiv('custom-ratio-container');
-		
+	
 		const widthInput = customRatioContainer.createEl('input', {
 			type: 'number',
 			placeholder: 'W',
 			cls: 'custom-ratio-input'
 		});
-		
+	
 		customRatioContainer.createEl('span', { text: ':' });
-		
+	
 		const heightInput = customRatioContainer.createEl('input', {
 			type: 'number',
 			placeholder: 'H',
 			cls: 'custom-ratio-input'
 		});
-
+	
 		// Function to update custom ratio
 		const updateCustomRatio = () => {
 			const width = parseFloat(widthInput.value);
 			const height = parseFloat(heightInput.value);
-			
+	
 			if (width > 0 && height > 0) {
 				// Remove active class from preset buttons
-				aspectRatioContainer.querySelectorAll('.aspect-ratio-button').forEach(btn => 
+				aspectRatioContainer.querySelectorAll('.aspect-ratio-button').forEach(btn =>
 					btn.removeClass('active'));
-					
+	
 				this.currentAspectRatio = width / height;
 				if (this.selectionArea.style.display !== 'none') {
 					this.adjustSelectionToAspectRatio();
 				}
 			}
 		};
-
+	
 		// Add input event listeners for immediate updates
 		widthInput.addEventListener('input', updateCustomRatio);
 		heightInput.addEventListener('input', updateCustomRatio);
-
+	
 		// Add image controls (rotation and zoom)
 		this.createImageControls(modalHeader);
-
-        try {
-            await this.loadImage();
-            this.setupEventListeners();
-
-            // Add button listeners
+	
+		try {
+			await this.loadImage();
+			this.setupEventListeners();
+	
+			// Add button listeners
 			this.registerEvent(saveButton, 'click', () => this.saveImage());
 			this.registerEvent(cancelButton, 'click', () => this.close());
 			this.registerEvent(resetButton, 'click', () => this.resetSelection());
-
+	
 			// Add escape key handler
 			this.registerEvent(document, 'keydown', (e: KeyboardEvent) => {
 				if (e.key === 'Escape') {
@@ -14027,12 +14034,12 @@ export class CropModal extends Modal {
 					e.stopPropagation();
 				}
 			});
-        } catch (error) {
-            new Notice('Error loading image for cropping');
-            console.error('Crop modal error:', error);
-            this.close();
-        }
-    }
+		} catch (error) {
+			new Notice('Error loading image for cropping');
+			console.error('Crop modal error:', error);
+			this.close();
+		}
+	}
 
     private async loadImage() {
         this.originalArrayBuffer = await this.app.vault.readBinary(this.imageFile);
